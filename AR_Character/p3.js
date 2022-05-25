@@ -828,30 +828,32 @@ function onResults(results) {
         landmarks[159].y,
         landmarks[159].z
       );
-      let DOWNRIGHTEYE = new THREE.Vector3(
+      let UPREYE = new THREE.Vector3(
+        landmarks[386].x,
+        landmarks[386].y,
+        landmarks[386].z
+      );
+      let DOWNLEFTEYE = new THREE.Vector3(
         landmarks[145].x,
         landmarks[145].y,
         landmarks[145].z
       );
+      let DOWNREYE = new THREE.Vector3(
+        landmarks[374].x,
+        landmarks[374].y,
+        landmarks[374].z
+      );
       
       max_mouth_size = Math.max(max_mouth_size,UPLIP.distanceToSquared(DOWNLIP))
-      console.log(influences[24])
+      //console.log(influences[24])
       influences[24] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_mouth_size ).toFixed(2); //거리 구하기
 
-      max_eye_size = Math.max(max_eye_size,UPLEFTEYE.distanceToSquared(DOWNRIGHTEYE))
-      console.log(max_eye_size)
-      influences[14] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_eye_size ).toFixed(2); 
-      //카톡사진 인덱스와 얼굴 애니메이션 인덱스 
-      //kaludo 의 방식 애니캐릭터 얼굴이랑 일치 시킨건가 인덱스를? 아니면 우리하는 방식처럼 ..
+      max_eye_size = Math.max(max_eye_size,UPLEFTEYE.distanceToSquared(DOWNLEFTEYE))
+      console.log(influences[14] , influences[13])
+      influences[14] = 1 - Math.abs(UPLEFTEYE.distanceToSquared(DOWNLEFTEYE) / max_eye_size ).toFixed(2); 
+      influences[13] = 1 - Math.abs(UPREYE.distanceToSquared(DOWNREYE) / max_eye_size ).toFixed(2); 
 
-      //linegeometry_faceoval.setPositions(oval_positions);
       lines_faceoval.geometry.setPositions(oval_positions);
-
-      //gl_lines_faceoval.geometry.attributes.position.array = oval_positions;
-      //gl_lines_faceoval.geometry.attributes.position.needsUpdate = true;
-      //console.log(lines_faceoval.geometry.attributes.position.array = oval_positions);
-      //lines_faceoval.geometry.attributes.position.needsUpdate = true;
-
       lines_faceoval.computeLineDistances();
       lines_faceoval.scale.set(1, 1, 1);
 
