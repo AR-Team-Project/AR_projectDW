@@ -25,6 +25,7 @@ import { MeshoptDecoder } from "./node_modules/three/examples/jsm/libs/meshopt_d
 import { RoomEnvironment } from "./node_modules/three/examples/jsm/environments/RoomEnvironment.js";
 
 import { GUI } from "./node_modules/three/examples/jsm/libs/lil-gui.module.min.js";
+import { Face } from "./node_modules/kalidokit/dist/kalidokit.es.js";
 
 // https://www.digitalocean.com/community/tutorials/front-and-rear-camera-access-with-javascripts-getusermedia
 //let stream = await navigator.mediaDevices.getUserMedia({video: true});
@@ -193,7 +194,7 @@ lensflare.addElement(new LensflareElement(textureFlare3, 70, 1));
 
 light_flare.add(lensflare);
 light_flare.visible = true;
-//scene.add(light_flare);
+scene.add(light_flare);
 scene.add(light);
 scene.add(light_ambient);
 
@@ -209,7 +210,7 @@ function update_light(pos) {
 let camera_ar_helper = new THREE.CameraHelper(camera_ar);
 scene.add(camera_ar_helper);
 
-let mixer, blendshapeMesh;
+let mixer, blendshapeMesh, gui, head, influences;
 const ktx2Loader = new KTX2Loader()
   .setTranscoderPath("./node_modules/three/examples/js/libs/basis/")
   .detectSupport(renderer_ar);
@@ -226,11 +227,11 @@ new GLTFLoader()
     //mixer.clipAction(gltf.animations[0]).play();
     console.log(gltf.animations);
     // GUI
-    const head = blendshapeMesh.getObjectByName("mesh_2");
-    const influences = head.morphTargetInfluences;
+    head = blendshapeMesh.getObjectByName("mesh_2");
+    influences = head.morphTargetInfluences;
     console.log(head.morphTargetDictionary);
 
-    const gui = new GUI();
+    gui = new GUI();
     gui.close();
     for (const [key, value] of Object.entries(head.morphTargetDictionary)) {
       console.log(key, value);
@@ -392,6 +393,9 @@ const faceMesh = new FaceMesh({
   },
 });
 
+var max_mouth_size = 0;
+var max_eye_size = 0;
+
 function onResults(results) {
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -522,6 +526,17 @@ function onResults(results) {
       let p_center = new THREE.Vector3(0, 0, 0);
       let p_ms_average = [0, 0, 0];
 
+      function AreaOfTriangle(p1, p2, p3) {
+        var v1 = new THREE.Vector3();
+        var v2 = new THREE.Vector3();
+        v1 = p1.clone().sub(p2);
+        v2 = p1.clone().sub(p3);
+        var v3 = new THREE.Vector3();
+        v3.crossVectors(v1, v2);
+        var s = v3.length() / 2;
+        return s;
+      }
+
       for (let i = 0; i < landmarks.length; i++) {
         let p = landmarks[i];
         //let p_ms = new THREE.Vector3((p.x - 0.5) * 2.0, -(p.y - 0.5) * 2.0, p.z).unproject(camera_ar);
@@ -553,7 +568,6 @@ function onResults(results) {
         uvs[i * 2 + 0] = p.x;
         uvs[i * 2 + 1] = -p.y + 1.0;
         //console.log(p.x +", "+p.y);
-
       }
 
       p_ms_average[0] /= landmarks.length;
@@ -566,18 +580,168 @@ function onResults(results) {
         p_ms_average[2]
       );
 
+      //rigging up by nose
+      var vec_up = new THREE.Vector3().subVectors(landmarks[1],landmarks[197])
+      console.log(new THREE.Vector3().subVectors(landmarks[1],landmarks[197]))
+      blendshapeMesh.up.set(-vec_up.x , vec_up.y ,vec_up.z )
+
+
       controls.target = p_center;
       //console.log(p_center.x + ", " + p_center.y + ", " + p_center.z);
       face_mesh.geometry.computeVertexNormals();
 
       let normal = face_mesh.geometry.getAttribute("normal");
       let position = face_mesh.geometry.getAttribute("position");
-      
+
+      let vec_0 = new THREE.Vector3(
+        normal.array[0],
+        normal.array[1],
+        normal.array[2]
+      ).normalize();
+
+
+      Object.entries(head.morphTargetDictionary).forEach((key, value) => {
+        let VECTOR = new THREE.Vector3(
+          position.array[453] - p_ms_average[0],
+          position.array[454] - p_ms_average[1],
+          position.array[455] - p_ms_average[2]
+        ).normalize();
+      }); // 뭔지 잘모르겠다
+
+      const animateModel = (points) => {
+        if (!blendshapeMesh || !points) return;
+        let riggedFace;
+        if (points) {
+          // use kalidokit face solver
+          riggedFace = Face.solve(points, {
+            runtime: "mediapipe",
+            video: videoElement,
+          });
+          rigFace(riggedFace, 0.5);
+          console.log(riggedFace);
+        }
+      };
+      const rigFace = (result, lerpAmount = 0.7) => {
+        if (!blendshapeMesh || !result) return;
+
+        // coreModel.setParameterValueById(
+        //   "ParamEyeBallX",
+        //   lerp(
+        //     result.pupil.x,
+        //     coreModel.getParameterValueById("ParamEyeBallX"),
+        //     lerpAmount
+        //   )
+        // );
+        // coreModel.setParameterValueById(
+        //   "ParamEyeBallY",
+        //   lerp(
+        //     result.pupil.y,
+        //     coreModel.getParameterValueById("ParamEyeBallY"),
+        //     lerpAmount
+        //   )
+        // );
+
+        // // X and Y axis rotations are swapped for Live2D parameters
+        // // because it is a 2D system and KalidoKit is a 3D system
+        // coreModel.setParameterValueById(
+        //   "ParamAngleX",
+        //   lerp(
+        //     result.head.degrees.y,
+        //     coreModel.getParameterValueById("ParamAngleX"),
+        //     lerpAmount
+        //   )
+        // );
+        // coreModel.setParameterValueById(
+        //   "ParamAngleY",
+        //   lerp(
+        //     result.head.degrees.x,
+        //     coreModel.getParameterValueById("ParamAngleY"),
+        //     lerpAmount
+        //   )
+        // );
+        // coreModel.setParameterValueById(
+        //   "ParamAngleZ",
+        //   lerp(
+        //     result.head.degrees.z,
+        //     coreModel.getParameterValueById("ParamAngleZ"),
+        //     lerpAmount
+        //   )
+        // );
+
+        // // update body params for models without head/body param sync
+        // const dampener = 0.3;
+        // coreModel.setParameterValueById(
+        //   "ParamBodyAngleX",
+        //   lerp(
+        //     result.head.degrees.y * dampener,
+        //     coreModel.getParameterValueById("ParamBodyAngleX"),
+        //     lerpAmount
+        //   )
+        // );
+        // coreModel.setParameterValueById(
+        //   "ParamBodyAngleY",
+        //   lerp(
+        //     result.head.degrees.x * dampener,
+        //     coreModel.getParameterValueById("ParamBodyAngleY"),
+        //     lerpAmount
+        //   )
+        // );
+        // coreModel.setParameterValueById(
+        //   "ParamBodyAngleZ",
+        //   lerp(
+        //     result.head.degrees.z * dampener,
+        //     coreModel.getParameterValueById("ParamBodyAngleZ"),
+        //     lerpAmount
+        //   )
+        // );
+
+        // // Simple example without winking.
+        // // Interpolate based on old blendshape, then stabilize blink with `Kalidokit` helper function.
+        // eye blink
+        function lerp(a, b, t) {
+          return (1 - t) * a + t * b;
+        }
+        let stabilizedEyes = Face.stabilizeBlink(
+          {
+            l: 1 - result.eye.r,
+            r: 1 - result.eye.l,
+          },
+          result.head.y
+        );
+        //influences[5] = 1 - stabilizedEyes.l;
+        //influences[6] = 1 - stabilizedEyes.r;
+        // influences[13] = stabilizedEyes.l;
+        // influences[14] = stabilizedEyes.r;
+        
+        // mouth
+        // coreModel.setParameterValueById(
+        //   "ParamMouthOpenY",
+        //   lerp(
+        //     result.mouth.y,
+        //     coreModel.getParameterValueById("ParamMouthOpenY"),
+        //     0.3
+        //   )
+        // );
+        // // Adding 0.3 to ParamMouthForm to make default more of a "smile"
+        // coreModel.setParameterValueById(
+        //   "ParamMouthForm",
+        //   0.3 +
+        //     lerp(
+        //       result.mouth.x,
+        //       coreModel.getParameterValueById("ParamMouthForm"),
+        //       0.3
+        //     )
+        // );
+      };
+
+      animateModel(landmarks);
+      // update live2d model internal state
+
       let normal_vec = new THREE.Vector3(
         normal.array[588],
         normal.array[589],
         normal.array[590]
-      );
+      ); //미디어파이프 페이스? 근데 468 아니었어? normal은 다른가
 
       let position_vec = new THREE.Vector3(
         position.array[15],
@@ -587,50 +751,98 @@ function onResults(results) {
 
       let lookat = new THREE.Vector3(0, 0, 0)
         .addVectors(normal_vec, position_vec)
-        .ceil();
+        .ceil(); //올림 연산
 
       lookat.y -= 10;
       blendshapeMesh.lookAt(lookat);
 
-      function AreaOfTriangle(p1, p2, p3) {
-        var v1 = new THREE.Vector3();
-        var v2 = new THREE.Vector3();
-        v1 = p1.clone().sub(p2);
-        v2 = p1.clone().sub(p3);
-        var v3 = new THREE.Vector3();
-        v3.crossVectors(v1, v2);
-        var s = v3.length() / 2;
-        return s;
-      }
-
       let tempVal = 0;
       for (let i = 0; i < TRIANGULATION.length / 3; i++) {
         let posVec1 = new THREE.Vector3(
-          position.array[TRIANGULATION[i * 3 + 0]],
-          position.array[TRIANGULATION[i * 3 + 0] + 1],
-          position.array[TRIANGULATION[i * 3 + 0] + 2]
+          landmarks[TRIANGULATION[i * 3 + 0]].x,
+          landmarks[TRIANGULATION[i * 3 + 0]].y,
+          landmarks[TRIANGULATION[i * 3 + 0]].z
         );
         let posVec2 = new THREE.Vector3(
-          position.array[TRIANGULATION[i * 3 + 1]],
-          position.array[TRIANGULATION[i * 3 + 1] + 1],
-          position.array[TRIANGULATION[i * 3 + 1] + 2]
+          landmarks[TRIANGULATION[i * 3 + 1]].x,
+          landmarks[TRIANGULATION[i * 3 + 1]].y,
+          landmarks[TRIANGULATION[i * 3 + 1]].z
         );
         let posVec3 = new THREE.Vector3(
-          position.array[TRIANGULATION[i * 3 + 2]],
-          position.array[TRIANGULATION[i * 3 + 2] + 1],
-          position.array[TRIANGULATION[i * 3 + 2] + 2]
+          landmarks[TRIANGULATION[i * 3 + 2]].x,
+          landmarks[TRIANGULATION[i * 3 + 2]].y,
+          landmarks[TRIANGULATION[i * 3 + 2]].z
         );
         tempVal += AreaOfTriangle(posVec1, posVec2, posVec3);
       }
 
-      let blendshapeScale = Math.log(tempVal / 10000) * 100;
+      // if you use coefficient 3.2, it's really suits you well.
+      // but since I wanted to give it some marginal scale, I set coefficient as 3.6.
+      //let blendshapeScale = 3.2 * Math.sqrt(tempVal);
+      let blendshapeScale = 3.6 * Math.sqrt(tempVal);
 
-      console.log(blendshapeScale);
       blendshapeMesh.scale.set(
         blendshapeScale,
         blendshapeScale,
         blendshapeScale
       );
+
+      let LEFT_UPPER = new THREE.Vector3(
+        landmarks[21].x,
+        landmarks[21].y,
+        landmarks[21].z
+      );
+      let RIGHT_UPPER = new THREE.Vector3(
+        landmarks[251].x,
+        landmarks[251].y,
+        landmarks[251].z
+      );
+      let STAND = new THREE.Vector3(
+        landmarks[2].x,
+        landmarks[2].y,
+        landmarks[2].z
+      );
+      let STAND2 = new THREE.Vector3(
+        landmarks[0].x,
+        landmarks[0].y,
+        landmarks[0].z
+      );
+      let JAW = new THREE.Vector3(
+        landmarks[175].x,
+        landmarks[175].y,
+        landmarks[175].z
+      );
+
+      let UPLIP = new THREE.Vector3(
+        landmarks[13].x,
+        landmarks[13].y,
+        landmarks[13].z
+      );
+      let DOWNLIP = new THREE.Vector3(
+        landmarks[14].x,
+        landmarks[14].y,
+        landmarks[14].z
+      );
+      let UPLEFTEYE = new THREE.Vector3(
+        landmarks[159].x,
+        landmarks[159].y,
+        landmarks[159].z
+      );
+      let DOWNRIGHTEYE = new THREE.Vector3(
+        landmarks[145].x,
+        landmarks[145].y,
+        landmarks[145].z
+      );
+      
+      max_mouth_size = Math.max(max_mouth_size,UPLIP.distanceToSquared(DOWNLIP))
+      console.log(influences[24])
+      influences[24] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_mouth_size ).toFixed(2); //거리 구하기
+
+      max_eye_size = Math.max(max_eye_size,UPLEFTEYE.distanceToSquared(DOWNRIGHTEYE))
+      console.log(max_eye_size)
+      influences[14] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_eye_size ).toFixed(2); 
+      //카톡사진 인덱스와 얼굴 애니메이션 인덱스 
+      //kaludo 의 방식 애니캐릭터 얼굴이랑 일치 시킨건가 인덱스를? 아니면 우리하는 방식처럼 ..
 
       //linegeometry_faceoval.setPositions(oval_positions);
       lines_faceoval.geometry.setPositions(oval_positions);

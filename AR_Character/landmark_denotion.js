@@ -1,6 +1,18 @@
+
+const renderer = new THREE.WebGLRenderer();
+const renderer_w = 680 
+const renderer_h = 480
+renderer.setSize( renderer_w, renderer_h );  
+renderer.setViewport(0,0,renderer_w, renderer_h); 
+document.body.appendChild( renderer.domElement );
+
+
 const videoElement = document.getElementsByClassName("input_video")[0];
 const canvasElement = document.getElementsByClassName("output_canvas")[0];
 const canvasCtx = canvasElement.getContext("2d");
+
+
+
 
 function onResults(results) {
   canvasCtx.save();
@@ -55,6 +67,7 @@ faceMesh.setOptions({
   refineLandmarks: true,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5,
+  STATIC_IMAGE_MODE: false
 });
 faceMesh.onResults(onResults);
 
@@ -65,4 +78,5 @@ const camera = new Camera(videoElement, {
   width: 1280,
   height: 720,
 });
+
 camera.start();
