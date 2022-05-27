@@ -593,20 +593,6 @@ function onResults(results) {
       let normal = face_mesh.geometry.getAttribute("normal");
       let position = face_mesh.geometry.getAttribute("position");
 
-      let vec_0 = new THREE.Vector3(
-        normal.array[0],
-        normal.array[1],
-        normal.array[2]
-      ).normalize();
-
-      Object.entries(head.morphTargetDictionary).forEach((key, value) => {
-        let VECTOR = new THREE.Vector3(
-          position.array[453] - p_ms_average[0],
-          position.array[454] - p_ms_average[1],
-          position.array[455] - p_ms_average[2]
-        ).normalize();
-      }); // 뭔지 잘모르겠다
-
       const animateModel = (points) => {
         if (!blendshapeMesh || !points) return;
         let riggedFace;
@@ -622,80 +608,8 @@ function onResults(results) {
       };
       const rigFace = (result, lerpAmount = 0.7) => {
         if (!blendshapeMesh || !result) return;
+        influences[0] = result.brow;
 
-        // coreModel.setParameterValueById(
-        //   "ParamEyeBallX",
-        //   lerp(
-        //     result.pupil.x,
-        //     coreModel.getParameterValueById("ParamEyeBallX"),
-        //     lerpAmount
-        //   )
-        // );
-        // coreModel.setParameterValueById(
-        //   "ParamEyeBallY",
-        //   lerp(
-        //     result.pupil.y,
-        //     coreModel.getParameterValueById("ParamEyeBallY"),
-        //     lerpAmount
-        //   )
-        // );
-
-        // // X and Y axis rotations are swapped for Live2D parameters
-        // // because it is a 2D system and KalidoKit is a 3D system
-        // coreModel.setParameterValueById(
-        //   "ParamAngleX",
-        //   lerp(
-        //     result.head.degrees.y,
-        //     coreModel.getParameterValueById("ParamAngleX"),
-        //     lerpAmount
-        //   )
-        // );
-        // coreModel.setParameterValueById(
-        //   "ParamAngleY",
-        //   lerp(
-        //     result.head.degrees.x,
-        //     coreModel.getParameterValueById("ParamAngleY"),
-        //     lerpAmount
-        //   )
-        // );
-        // coreModel.setParameterValueById(
-        //   "ParamAngleZ",
-        //   lerp(
-        //     result.head.degrees.z,
-        //     coreModel.getParameterValueById("ParamAngleZ"),
-        //     lerpAmount
-        //   )
-        // );
-
-        // // update body params for models without head/body param sync
-        // const dampener = 0.3;
-        // coreModel.setParameterValueById(
-        //   "ParamBodyAngleX",
-        //   lerp(
-        //     result.head.degrees.y * dampener,
-        //     coreModel.getParameterValueById("ParamBodyAngleX"),
-        //     lerpAmount
-        //   )
-        // );
-        // coreModel.setParameterValueById(
-        //   "ParamBodyAngleY",
-        //   lerp(
-        //     result.head.degrees.x * dampener,
-        //     coreModel.getParameterValueById("ParamBodyAngleY"),
-        //     lerpAmount
-        //   )
-        // );
-        // coreModel.setParameterValueById(
-        //   "ParamBodyAngleZ",
-        //   lerp(
-        //     result.head.degrees.z * dampener,
-        //     coreModel.getParameterValueById("ParamBodyAngleZ"),
-        //     lerpAmount
-        //   )
-        // );
-
-        // // Simple example without winking.
-        // // Interpolate based on old blendshape, then stabilize blink with `Kalidokit` helper function.
         // eye blink
         function lerp(a, b, t) {
           return (1 - t) * a + t * b;
@@ -711,26 +625,6 @@ function onResults(results) {
         //influences[6] = 1 - stabilizedEyes.r;
         // influences[13] = stabilizedEyes.l;
         // influences[14] = stabilizedEyes.r;
-
-        // mouth
-        // coreModel.setParameterValueById(
-        //   "ParamMouthOpenY",
-        //   lerp(
-        //     result.mouth.y,
-        //     coreModel.getParameterValueById("ParamMouthOpenY"),
-        //     0.3
-        //   )
-        // );
-        // // Adding 0.3 to ParamMouthForm to make default more of a "smile"
-        // coreModel.setParameterValueById(
-        //   "ParamMouthForm",
-        //   0.3 +
-        //     lerp(
-        //       result.mouth.x,
-        //       coreModel.getParameterValueById("ParamMouthForm"),
-        //       0.3
-        //     )
-        // );
       };
 
       animateModel(landmarks);
@@ -822,12 +716,42 @@ function onResults(results) {
         landmarks[14].y,
         landmarks[14].z
       );
+
+      const UPPERCENTER = new THREE.Vector3(
+        landmarks[6].x,
+        landmarks[6].y,
+        landmarks[6].z
+      );
+
+      const UPPERCENTER2 = new THREE.Vector3(
+        landmarks[168].x,
+        landmarks[168].y,
+        landmarks[168].z
+      );
+
+      const LEFTBROW = new THREE.Vector3(
+        landmarks[282].x,
+        landmarks[282].y,
+        landmarks[282].z
+      );
+
+      const RIGHTBROW = new THREE.Vector3(
+        landmarks[52].x,
+        landmarks[52].y,
+        landmarks[52].z
+      );
+
+      const CENTERBROW = new THREE.Vector3(
+        landmarks[52].x + landmarks[282].x / 2,
+        landmarks[52].y + landmarks[282].y / 2,
+        landmarks[52].z + landmarks[282].z / 2
+      );
       let UPLEFTEYE = new THREE.Vector3(
         landmarks[159].x,
         landmarks[159].y,
         landmarks[159].z
       );
-      let UPREYE = new THREE.Vector3(
+      let UPRIGHTEYE = new THREE.Vector3(
         landmarks[386].x,
         landmarks[386].y,
         landmarks[386].z
@@ -837,7 +761,7 @@ function onResults(results) {
         landmarks[145].y,
         landmarks[145].z
       );
-      let DOWNREYE = new THREE.Vector3(
+      let DOWNRIGHTEYE = new THREE.Vector3(
         landmarks[374].x,
         landmarks[374].y,
         landmarks[374].z
@@ -858,12 +782,11 @@ function onResults(results) {
 
       let transform = function (max_size, pt1, pt2) {
         let area = (Math.sqrt(landmarkArea) / 211).toFixed(5);
-        console.log(pt1.distanceToSquared(pt2));
+        console.log(pt1.distanceToSquared(pt2) / (max_size * area) / area);
         return Math.abs(
           pt1.distanceToSquared(pt2) / (max_size * area) / area
         ).toFixed(2);
       };
-
       influences[24] = transform(2000, UPLIP, DOWNLIP);
       influences[13] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
       influences[14] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
