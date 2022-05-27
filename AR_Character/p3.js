@@ -104,8 +104,10 @@ const render_w = Math.min(640, document.documentElement.clientWidth);
 const render_h = render_w / aspect_ratio_world;
 const renderer_ar = new THREE.WebGLRenderer({ antialias: true });
 const renderer_world = new THREE.WebGLRenderer({ antialias: true });
+const renderer_world2 = new THREE.WebGLRenderer({ antialias: true });
 renderer_ar.setSize(render_w_ar, render_h_ar);
 renderer_world.setSize(render_w, render_h);
+renderer_world2.setSize(render_w, render_h);
 
 const testElement = document.getElementById("test");
 testElement.textContent = devices.length;
@@ -116,7 +118,7 @@ testElement.textContent = devices.length;
 
 document.body.appendChild(renderer_ar.domElement);
 document.body.appendChild(renderer_world.domElement);
-
+document.body.appendChild(renderer_world2.domElement);
 //THREE.OrthographicCamera;
 const camera_ar = new THREE.PerspectiveCamera(63, aspect_ratio, 60.0, 500);
 const camera_world = new THREE.PerspectiveCamera(
@@ -137,6 +139,10 @@ camera_world.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera_world, renderer_world.domElement);
 controls.enableDamping = true;
+
+const controls2 = new OrbitControls(camera_world, renderer_world2.domElement);
+controls2.enableDamping = true;
+
 
 const scene = new THREE.Scene();
 
@@ -913,8 +919,14 @@ function onResults(results) {
       scene.remove(camera_ar_helper);
       scene.remove(plane_bg);
       renderer_ar.render(scene, camera_ar);
+
+      scene.remove(face_mesh);
+      //scene.remove(plane_bg);
+      renderer_world2.render(scene, camera_world);
+
       scene.background = null;
       face_mesh.material.map = texture_frame;
+      scene.add(face_mesh)
       scene.add(light_helper);
       scene.add(camera_ar_helper);
       scene.add(plane_bg);
