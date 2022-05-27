@@ -4,9 +4,10 @@ canvasElement.style.display = "none";
 const canvasCtx = canvasElement.getContext("2d");
 
 //import { FACEMESH_FACE_OVAL } from "@mediapipe/face_mesh";
-import * as THREE from './node_modules/three/build/three.module.js';
+import * as THREE from "./node_modules/three/build/three.module.js";
 import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
-import { Lensflare,
+import {
+  Lensflare,
   LensflareElement,
 } from "./node_modules/three/examples/jsm/objects/Lensflare.js";
 
@@ -581,10 +582,9 @@ function onResults(results) {
       );
 
       //rigging up by nose
-      var vec_up = new THREE.Vector3().subVectors(landmarks[1],landmarks[197])
-      console.log(new THREE.Vector3().subVectors(landmarks[1],landmarks[197]))
-      blendshapeMesh.up.set(-vec_up.x , vec_up.y ,vec_up.z )
-
+      let vec_up = new THREE.Vector3().subVectors(landmarks[1], landmarks[197]);
+      console.log(new THREE.Vector3().subVectors(landmarks[1], landmarks[197]));
+      blendshapeMesh.up.set(-vec_up.x, vec_up.y, vec_up.z);
 
       controls.target = p_center;
       //console.log(p_center.x + ", " + p_center.y + ", " + p_center.z);
@@ -598,7 +598,6 @@ function onResults(results) {
         normal.array[1],
         normal.array[2]
       ).normalize();
-
 
       Object.entries(head.morphTargetDictionary).forEach((key, value) => {
         let VECTOR = new THREE.Vector3(
@@ -712,7 +711,7 @@ function onResults(results) {
         //influences[6] = 1 - stabilizedEyes.r;
         // influences[13] = stabilizedEyes.l;
         // influences[14] = stabilizedEyes.r;
-        
+
         // mouth
         // coreModel.setParameterValueById(
         //   "ParamMouthOpenY",
@@ -756,7 +755,7 @@ function onResults(results) {
       lookat.y -= 10;
       blendshapeMesh.lookAt(lookat);
 
-      let tempVal = 0;
+      let landmarkArea = 0;
       for (let i = 0; i < TRIANGULATION.length / 3; i++) {
         let posVec1 = new THREE.Vector3(
           landmarks[TRIANGULATION[i * 3 + 0]].x,
@@ -773,13 +772,13 @@ function onResults(results) {
           landmarks[TRIANGULATION[i * 3 + 2]].y,
           landmarks[TRIANGULATION[i * 3 + 2]].z
         );
-        tempVal += AreaOfTriangle(posVec1, posVec2, posVec3);
+        landmarkArea += AreaOfTriangle(posVec1, posVec2, posVec3);
       }
 
       // if you use coefficient 3.2, it's really suits you well.
       // but since I wanted to give it some marginal scale, I set coefficient as 3.6.
       //let blendshapeScale = 3.2 * Math.sqrt(tempVal);
-      let blendshapeScale = 3.6 * Math.sqrt(tempVal);
+      let blendshapeScale = 3.6 * Math.sqrt(landmarkArea);
 
       blendshapeMesh.scale.set(
         blendshapeScale,
@@ -813,12 +812,12 @@ function onResults(results) {
         landmarks[175].z
       );
 
-      let UPLIP = new THREE.Vector3(
+      const UPLIP = new THREE.Vector3(
         landmarks[13].x,
         landmarks[13].y,
         landmarks[13].z
       );
-      let DOWNLIP = new THREE.Vector3(
+      const DOWNLIP = new THREE.Vector3(
         landmarks[14].x,
         landmarks[14].y,
         landmarks[14].z
@@ -843,15 +842,45 @@ function onResults(results) {
         landmarks[374].y,
         landmarks[374].z
       );
-      
-      max_mouth_size = Math.max(max_mouth_size,UPLIP.distanceToSquared(DOWNLIP))
-      //console.log(influences[24])
-      influences[24] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_mouth_size ).toFixed(2); //거리 구하기
 
-      max_eye_size = Math.max(max_eye_size,UPLEFTEYE.distanceToSquared(DOWNLEFTEYE))
-      console.log(influences[14] , influences[13])
-      influences[14] = 1 - Math.abs(UPLEFTEYE.distanceToSquared(DOWNLEFTEYE) / max_eye_size ).toFixed(2); 
-      influences[13] = 1 - Math.abs(UPREYE.distanceToSquared(DOWNREYE) / max_eye_size ).toFixed(2); 
+      // max_mouth_size = Math.max(
+      //   max_mouth_size,
+      //   UPLIP.distanceToSquared(DOWNLIP)
+      // );
+
+      // let area = (Math.sqrt(landmarkArea) / 211).toFixed(5);
+      // max_mouth_size = 2000 * area;
+      // //console.log(influences[24])
+      // influences[24] = Math.abs(
+      //   UPLIP.distanceToSquared(DOWNLIP) / max_mouth_size / area
+      // ).toFixed(2); //거리 구하기
+      // console.log(influences[24]);
+
+      let transform = function (max_size, pt1, pt2) {
+        let area = (Math.sqrt(landmarkArea) / 211).toFixed(5);
+        console.log(pt1.distanceToSquared(pt2));
+        return Math.abs(
+          pt1.distanceToSquared(pt2) / (max_size * area) / area
+        ).toFixed(2);
+      };
+
+      influences[24] = transform(2000, UPLIP, DOWNLIP);
+      influences[13] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
+      influences[14] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
+
+      // max_eye_size = Math.max(
+      //   max_eye_size,
+      //   UPLEFTEYE.distanceToSquared(DOWNLEFTEYE)
+      // );
+      // //console.log(influences[14], influences[13]);
+      // influences[14] =
+      //   1 -
+      //   Math.abs(
+      //     UPLEFTEYE.distanceToSquared(DOWNLEFTEYE) / max_eye_size
+      //   ).toFixed(2);
+      // influences[13] =
+      //   1 -
+      //   Math.abs(UPREYE.distanceToSquared(DOWNREYE) / max_eye_size).toFixed(2);
 
       lines_faceoval.geometry.setPositions(oval_positions);
       lines_faceoval.computeLineDistances();
