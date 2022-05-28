@@ -1,3 +1,4 @@
+import * as THREE from "./node_modules/three/build/three.module.js";
 
 const renderer = new THREE.WebGLRenderer();
 const renderer_w = 680 
@@ -10,7 +11,6 @@ document.body.appendChild( renderer.domElement );
 const videoElement = document.getElementsByClassName("input_video")[0];
 const canvasElement = document.getElementsByClassName("output_canvas")[0];
 const canvasCtx = canvasElement.getContext("2d");
-
 
 
 
@@ -52,9 +52,11 @@ function onResults(results) {
         color: "#E0E0E0",
       });
       drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, { color: "#E0E0E0" });
+      console.log(landmarks[14]);
+
     }
   }
-  canvasCtx.restore();
+    canvasCtx.restore();
 }
 
 const faceMesh = new FaceMesh({

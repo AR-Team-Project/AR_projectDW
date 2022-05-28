@@ -105,8 +105,10 @@ const render_w = Math.min(640, document.documentElement.clientWidth);
 const render_h = render_w / aspect_ratio_world;
 const renderer_ar = new THREE.WebGLRenderer({ antialias: true });
 const renderer_world = new THREE.WebGLRenderer({ antialias: true });
+const renderer_world2 = new THREE.WebGLRenderer({ antialias: true });
 renderer_ar.setSize(render_w_ar, render_h_ar);
 renderer_world.setSize(render_w, render_h);
+renderer_world2.setSize(render_w, render_h);
 
 const testElement = document.getElementById("test");
 testElement.textContent = devices.length;
@@ -117,7 +119,7 @@ testElement.textContent = devices.length;
 
 document.body.appendChild(renderer_ar.domElement);
 document.body.appendChild(renderer_world.domElement);
-
+document.body.appendChild(renderer_world2.domElement);
 //THREE.OrthographicCamera;
 const camera_ar = new THREE.PerspectiveCamera(63, aspect_ratio, 60.0, 500);
 const camera_world = new THREE.PerspectiveCamera(
@@ -138,6 +140,10 @@ camera_world.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera_world, renderer_world.domElement);
 controls.enableDamping = true;
+
+const controls2 = new OrbitControls(camera_world, renderer_world2.domElement);
+controls2.enableDamping = true;
+
 
 const scene = new THREE.Scene();
 
@@ -395,8 +401,10 @@ const faceMesh = new FaceMesh({
 });
 
 var max_mouth_size = 0;
+var max_smile = 0;
+var min_smile = 10000;
 var max_eye_size = 0;
-
+var pre_dist = 1;
 function onResults(results) {
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -608,7 +616,7 @@ function onResults(results) {
       };
       const rigFace = (result, lerpAmount = 0.7) => {
         if (!blendshapeMesh || !result) return;
-        influences[0] = result.brow;
+        //influences[0] = result.brow;
 
         // eye blink
         function lerp(a, b, t) {
@@ -741,11 +749,6 @@ function onResults(results) {
         landmarks[52].z
       );
 
-      const CENTERBROW = new THREE.Vector3(
-        landmarks[52].x + landmarks[282].x / 2,
-        landmarks[52].y + landmarks[282].y / 2,
-        landmarks[52].z + landmarks[282].z / 2
-      );
       let UPLEFTEYE = new THREE.Vector3(
         landmarks[159].x,
         landmarks[159].y,
@@ -767,6 +770,25 @@ function onResults(results) {
         landmarks[374].z
       );
 
+      let SmileC = new THREE.Vector3(
+        landmarks[14].x,landmarks[14].y,landmarks[14].z
+      );
+      let SmileL = new THREE.Vector3(
+        landmarks[78].x,landmarks[78].y,landmarks[78].z
+      ); 
+      let SmileR = new THREE.Vector3(
+        landmarks[308].x,landmarks[308].y,landmarks[308].z
+      ); 
+
+      let Stand1_1 = new THREE.Vector3(
+        landmarks[454].x,landmarks[454].y,landmarks[454].z
+      ); 
+      let Stand1_2 = new THREE.Vector3(
+        landmarks[234].x,landmarks[234].y,landmarks[234].z
+      ); 
+
+
+
       // max_mouth_size = Math.max(
       //   max_mouth_size,
       //   UPLIP.distanceToSquared(DOWNLIP)
@@ -780,30 +802,83 @@ function onResults(results) {
       // ).toFixed(2); //거리 구하기
       // console.log(influences[24]);
 
-      let transform = function (max_size, pt1, pt2) {
-        let area = (Math.sqrt(landmarkArea) / 211).toFixed(5);
-        console.log(pt1.distanceToSquared(pt2) / (max_size * area) / area);
-        return Math.abs(
-          pt1.distanceToSquared(pt2) / (max_size * area) / area
-        ).toFixed(2);
-      };
-      influences[24] = transform(2000, UPLIP, DOWNLIP);
-      influences[13] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
-      influences[14] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE);
 
+
+      // console.log(face_mesh.geometry.attributes.position)
+      // console.log("x "+ blendshapeMesh.position.x )
+      // console.log("y "+ blendshapeMesh.position.y )
+      // console.log("z "+ blendshapeMesh.position.z )
+      // console.log(landmarks[6])
+
+      // //let SS1 = new THREE.Vector3();
+      // //let pix2OS = SS1.set(( (window.innerWidth/2) / window.innerWidth ) * 2 - 1,- ( (window.innerHeight/2) / window.innerHeight ) * 2 + 1,-1).unproject(camera_ar) 
+     
+/*      let disStand = Math.abs(Math.abs(camera_ar.localToWorld(new THREE.Vector3()).z) - Math.abs(landmarks[6].z))
+      console.log(disStand)//blendshape 의 좌표계를 알수없어서 차선책으로 landmark
+          
+      max_eye_size = max_eye_size * (disStand/pre_dist)
+      max_mouth_size= max_mouth_size * (disStand/pre_dist)
+      max_smile = max_smile * (disStand/pre_dist)
+      min_smile = min_smile * (disStand/pre_dist)
+    
+      max_mouth_size = Math.max(
+        max_mouth_size,
+        UPLIP.distanceToSquared(DOWNLIP)
+      );
+      max_smile = Math.max(
+        max_smile,
+        SmileC.distanceToSquared(SmileL)
+      );
+      min_smile = Math.min(
+        min_smile,
+        SmileC.distanceToSquared(SmileL)
+      );
+
+      influences[24] = Math.abs(UPLIP.distanceToSquared(DOWNLIP) / max_mouth_size).toFixed(2); //거리 구하기
+      influences[37] =  Math.abs((SmileC.distanceTo(SmileL) - min_smile)/(max_mouth_size- min_smile)).toFixed(2);
+      influences[38] =  Math.abs((SmileC.distanceTo(SmileR) - min_smile)/(max_mouth_size- min_smile)).toFixed(2);
+
+      pre_dist = disStand
+ */
       // max_eye_size = Math.max(
       //   max_eye_size,
       //   UPLEFTEYE.distanceToSquared(DOWNLEFTEYE)
       // );
-      // //console.log(influences[14], influences[13]);
-      // influences[14] =
-      //   1 -
-      //   Math.abs(
-      //     UPLEFTEYE.distanceToSquared(DOWNLEFTEYE) / max_eye_size
-      //   ).toFixed(2);
-      // influences[13] =
-      //   1 -
-      //   Math.abs(UPREYE.distanceToSquared(DOWNREYE) / max_eye_size).toFixed(2);
+      // console.log(influences[14], influences[13],max_eye_size);
+      // influences[14] =1 -Math.abs(UPLEFTEYE.distanceToSquared(DOWNLEFTEYE) / max_eye_size).toFixed(2);
+      // influences[13] =1 -Math.abs(UPRIGHTEYE.distanceToSquared(DOWNRIGHTEYE) / max_eye_size).toFixed(2);
+      
+      let transform = function (max_size, pt1, pt2, min_size) {
+        let area = (Math.sqrt(landmarkArea) / 211).toFixed(5);
+        let face_value =(pt1.distanceToSquared(pt2) - min_size) / ((max_size * area) * area);
+        console.log(face_value)
+        if(face_value > 1){
+          face_value = 1
+        }
+        return Math.abs(face_value).toFixed(2);    
+      };
+
+      influences[24] = transform(2200,UPLIP, DOWNLIP,0);
+      influences[14] = 1 - transform(70, UPLEFTEYE, DOWNLEFTEYE,0) + 0.3;
+      influences[13] = 1 - transform(70, UPRIGHTEYE, DOWNRIGHTEYE,0) + 0.3;
+      influences[17] = transform(1000,RIGHTBROW, UPLEFTEYE,0);
+      influences[18] = transform(1000,LEFTBROW, UPRIGHTEYE,0);
+      influences[0] = transform(1000,RIGHTBROW, UPLEFTEYE,0);
+      // influences[4] = transform(1000,RIGHTBROW, UPLEFTEYE,0);
+      // influences[5] = transform(1000,LEFTBROW, UPRIGHTEYE,0);
+
+      //smile
+      max_smile = Math.max(
+        max_smile,
+        SmileC.distanceToSquared(SmileL)
+      );
+      min_smile = Math.min(
+        min_smile,
+        SmileC.distanceToSquared(SmileL)
+      );
+
+      influences[37] = transform(1500,SmileC, SmileL, min_smile);
+      influences[38] = transform(1500,SmileC, SmileR, min_smile);
 
       lines_faceoval.geometry.setPositions(oval_positions);
       lines_faceoval.computeLineDistances();
@@ -865,8 +940,14 @@ function onResults(results) {
       scene.remove(camera_ar_helper);
       scene.remove(plane_bg);
       renderer_ar.render(scene, camera_ar);
+
+      scene.remove(face_mesh);
+      //scene.remove(plane_bg);
+      renderer_world2.render(scene, camera_world);
+
       scene.background = null;
       face_mesh.material.map = texture_frame;
+      scene.add(face_mesh)
       scene.add(light_helper);
       scene.add(camera_ar_helper);
       scene.add(plane_bg);
